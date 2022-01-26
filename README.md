@@ -1,2 +1,2 @@
 # RCB
-Reddit Chat Bot
+Reddit Chat Bot AI
