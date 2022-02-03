@@ -3,12 +3,13 @@ import json
 from datetime import datetime
 import mmap
 from tqdm import tqdm
+from settings import *
 
 
-timeframe = "RC_2021-06"
+timeframe = "RC_2008-01"
 sql_transaction = []
 
-connection = sqlite3.connect(f"D:/REDDIT_DATA/{timeframe}.db")
+connection = sqlite3.connect(f"{data_drive_letter}:/REDDIT_DATA/{timeframe}.db")
 c = connection.cursor()
 
 
@@ -171,7 +172,7 @@ def main():
 	row_counter = 0
 	paired_rows = 0
 
-	file_path = f"D:/REDDIT_DATA/{timeframe}"
+	file_path = f"{data_drive_letter}:/REDDIT_DATA/{timeframe}"
 	with open(file_path, buffering=16384) as file:
 		# for row in file:
 		for row in tqdm(file, total=get_num_lines(file_path)):
@@ -181,7 +182,10 @@ def main():
 			body = format_data(row["body"])
 			created_utc = row["created_utc"]
 			score = row["score"]
-			comment_id = row["name"]
+			try:
+				comment_id = row["name"]
+			except KeyError:
+				comment_id = row["author"]
 			subreddit = row["subreddit"]
 			parent_data = find_parent(parent_id)
 
