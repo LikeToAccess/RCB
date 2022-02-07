@@ -10,6 +10,9 @@ from settings import *
 timeframe = sys.argv[1:][0] if sys.argv[1:] else "RC_2008-01.json"
 sql_transaction = []
 
+connection = sqlite3.connect(f"{data_drive_letter}:/REDDIT_DATA/reddit_database.db")
+c = connection.cursor()
+
 
 def get_num_lines(file_path, memory_mapped=True):
 	print(
@@ -30,6 +33,21 @@ def get_num_lines(file_path, memory_mapped=True):
 		lines = sum(1 for line in open(file_path))
 
 	return lines
+
+def transaction_bldr(sql):
+	global sql_transaction
+
+	sql_transaction.append(sql)
+	if len(sql_transaction) > 2048:
+		c.execute("BEGIN TRANSACTION")
+		for s in sql_transaction:
+			try:
+				c.execute(s)
+			except Exception as e:
+				# print(f"transaction_bldr: {e}")
+				pass
+		connection.commit()
+		sql_transaction = []
 
 def sql_insert_replace_comment(comment_id, parent_id, parent, comment, subreddit, time, score):
 	try:
@@ -149,86 +167,67 @@ def create_table():
 		)"
 	)
 
-class Database:
-	def __init__(self):
-		self.connection = sqlite3.connect(f"{data_drive_letter}:/REDDIT_DATA/reddit_database.db")
-		self.c = self.connection.cursor()
+def main():
+	create_table()
+	row_counter = 0
+	paired_rows = 0
 
-	def transaction_bldr(self, sql):
-		global sql_transaction
+	file_path = f"{data_drive_letter}:/REDDIT_DATA/{timeframe}"
+	with open(file_path, buffering=16384) as file:
+		# for row in file:
+		for row in tqdm(file, total=get_num_lines(file_path)):
+			row_counter += 1
+			row = json.loads(row)
+			parent_id = row["parent_id"]
+			body = format_data(row["body"])
+			created_utc = row["created_utc"]
+			score = row["score"]
+			try:
+				comment_id = row["name"]
+			except KeyError:
+				comment_id = row["author"]
+			subreddit = row["subreddit"]
+			parent_data = find_parent(parent_id)
 
-		sql_transaction.append(sql)
-		if len(sql_transaction) > 2048:
-			c.execute("BEGIN TRANSACTION")
-			for s in sql_transaction:
-				try:
-					c.execute(s)
-				except Exception as e:
-					# print(f"transaction_bldr: {e}")
-					pass
-			self.connection.commit()
-			sql_transaction = []
-
-	def run():
-		create_table()
-		row_counter = 0
-		paired_rows = 0
-
-		file_path = f"{data_drive_letter}:/REDDIT_DATA/{timeframe}"
-		with open(file_path, buffering=16384) as file:
-			# for row in file:
-			for row in tqdm(file, total=get_num_lines(file_path)):
-				row_counter += 1
-				row = json.loads(row)
-				parent_id = row["parent_id"]
-				body = format_data(row["body"])
-				created_utc = row["created_utc"]
-				score = row["score"]
-				try:
-					comment_id = row["name"]
-				except KeyError:
-					comment_id = row["author"]
-				subreddit = row["subreddit"]
-				parent_data = find_parent(parent_id)
-
-				if score > 1:
-					if acceptable(body):
-						existing_comment_score = find_existing_score(parent_id)
-						if existing_comment_score:
-							if score > existing_comment_score:
-								sql_insert_replace_comment(
-									comment_id,
-									parent_id,
-									parent_data,
-									body,
-									subreddit,
-									created_utc,
-									score
-								)
+			if score > 1:
+				if acceptable(body):
+					existing_comment_score = find_existing_score(parent_id)
+					if existing_comment_score:
+						if score > existing_comment_score:
+							sql_insert_replace_comment(
+								comment_id,
+								parent_id,
+								parent_data,
+								body,
+								subreddit,
+								created_utc,
+								score
+							)
+					else:
+						if parent_data:
+							sql_insert_has_parent(comment_id,
+								parent_id,
+								parent_data,
+								body,
+								subreddit,
+								created_utc,
+								score
+							)
+							paired_rows += 1
 						else:
-							if parent_data:
-								sql_insert_has_parent(comment_id,
-									parent_id,
-									parent_data,
-									body,
-									subreddit,
-									created_utc,
-									score
-								)
-								paired_rows += 1
-							else:
-								sql_insert_no_parent(
-									comment_id,
-									parent_id,
-									body,
-									subreddit,
-									created_utc,
-									score
-								)
+							sql_insert_no_parent(
+								comment_id,
+								parent_id,
+								body,
+								subreddit,
+								created_utc,
+								score
+							)
 
-		print(f"Total rows read: {row_counter}, Paired rows: {paired_rows}, Time: {datetime.now()}")
+			# if row_counter % 100000 == 0:
+				# print(f"Total rows read: {row_counter}, Paired rows: {paired_rows}, Time: {datetime.now()}")
+	print(f"Total rows read: {row_counter}, Paired rows: {paired_rows}, Time: {datetime.now()}")
 
 
 if __name__ == "__main__":
-	database = Database()
-	database.run()
+	main()
