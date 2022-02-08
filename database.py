@@ -54,7 +54,8 @@ def format_data(data):
 
 
 class Database:
-	def __init__(self):
+	def __init__(self, timeframe=timeframe):
+		self.timeframe = timeframe
 		self.connection = sqlite3.connect(f"{data_drive_letter}:/REDDIT_DATA/reddit_database.db")
 		self.c = self.connection.cursor()
 		self.comment_id = None
