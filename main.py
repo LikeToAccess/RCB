@@ -51,8 +51,13 @@ def main():
 	for filename in filenames:
 		if filename in completed:
 			continue
+		threads = []
 		for thread_num in range(1, maximum_thread_limit+1):
-			Create_Thread(thread_num, filename).start()
+			threads.append(Create_Thread(thread_num, filename))
+			threads[-1].start()
+
+		for thread in threads:
+			thread.join()
 
 		append_file(log_filename, filename)
 
