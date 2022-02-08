@@ -1,4 +1,5 @@
 import os
+import thread
 import format_json
 from database import Database
 from settings import *
@@ -37,8 +38,12 @@ def main():
 	for filename in filenames:
 		if filename in completed:
 			continue
-		for thread in range(1, maximum_thread_limit+1):
-			Database(filename).run(thread)
+		for thread_num in range(1, maximum_thread_limit+1):
+			thread.start_new_thread(
+				Database(filename).run,
+				(thread_num,)
+			)
+
 		append_file(log_filename, filename)
 
 
