@@ -11,7 +11,7 @@ timeframe = sys.argv[1:][0] if sys.argv[1:] else "RC_2008-01.json"
 sql_transaction = []
 
 
-def get_num_lines(file_path, memory_mapped=True):
+def file_line_count(file_path, memory_mapped=False):
 	print(
 		"Reading lines (mapping file to RAM)..." \
 			if memory_mapped else                \
@@ -182,8 +182,7 @@ class Database:
 
 		file_path = f"{data_drive_letter}:/REDDIT_DATA/{timeframe}"
 		with open(file_path, buffering=16384) as file:
-			# for row in file:
-			for row in tqdm(file, total=get_num_lines(file_path)):
+			for row in tqdm(file, desc=timeframe, total=file_line_count(file_path)):
 				row_counter += 1
 				row = json.loads(row)
 				self.parent_id = row["parent_id"]
