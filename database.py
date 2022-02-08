@@ -181,9 +181,9 @@ class Database:
 		row_counter = 0
 		paired_rows = 0
 
-		file_path = f"{data_drive_letter}:/REDDIT_DATA/{timeframe}"
+		file_path = f"{data_drive_letter}:/REDDIT_DATA/{self.timeframe}"
 		with open(file_path, buffering=16384) as file:
-			for row in tqdm(file, desc=timeframe, total=file_line_count(file_path)):
+			for row in tqdm(file, desc=self.timeframe, total=file_line_count(file_path)):
 				row_counter += 1
 				row = json.loads(row)
 				self.parent_id = row["parent_id"]
