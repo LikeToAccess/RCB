@@ -1,5 +1,5 @@
 import os
-import thread
+import threading
 import format_json
 from database import Database
 from settings import *
@@ -32,6 +32,19 @@ def append_file(filename, data):
 	with open(filename, "a") as file:
 		file.write(f"{data}\n")
 
+
+class Create_Thread(threading.Thread):
+	def __init__(self, thread_num, filename):
+		threading.Thread.__init__(self)
+		self.thread_num = thread_num
+		self.filename = filename
+
+	def run(self):
+		print("Starting " + self.filename)
+		Database(self.filename).run(self.thread_num)
+		print("Exiting " + self.name)
+
+
 def main():
 	completed = read_file(log_filename)
 	filenames = format_json.run()["files"]
@@ -39,10 +52,7 @@ def main():
 		if filename in completed:
 			continue
 		for thread_num in range(1, maximum_thread_limit+1):
-			thread.start_new_thread(
-				Database(filename).run,
-				(thread_num,)
-			)
+			Create_Thread(thread_num, filename).start()
 
 		append_file(log_filename, filename)
 

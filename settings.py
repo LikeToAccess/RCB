@@ -1,2 +1,2 @@
 data_drive_letter = "X"
-maximum_thread_limit = 20
+maximum_thread_limit = 3
