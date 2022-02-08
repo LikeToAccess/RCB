@@ -176,7 +176,7 @@ class Database:
 		except Exception as e:
 			print(f"sql_insert_has_parent: {e}")
 
-	def run(self):
+	def run(self, thread_num):
 		self.create_table()
 		row_counter = 0
 		paired_rows = 0
@@ -185,6 +185,8 @@ class Database:
 		with open(file_path, buffering=16384) as file:
 			for row in tqdm(file, desc=self.timeframe, total=file_line_count(file_path)):
 				row_counter += 1
+				if (row_counter+thread_num) % (maximum_thread_limit) != 0:
+					continue
 				row = json.loads(row)
 				self.parent_id = row["parent_id"]
 				self.comment = format_data(row["body"])
@@ -215,4 +217,4 @@ class Database:
 
 if __name__ == "__main__":
 	database = Database()
-	database.run()
+	database.run(1)

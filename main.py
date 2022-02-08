@@ -1,6 +1,7 @@
 import os
 import format_json
 from database import Database
+from settings import *
 
 
 log_filename = os.path.abspath("completed.log")
@@ -36,7 +37,8 @@ def main():
 	for filename in filenames:
 		if filename in completed:
 			continue
-		Database(filename).run()
+		for thread in range(1, maximum_thread_limit+1):
+			Database(filename).run(thread)
 		append_file(log_filename, filename)
 
 
