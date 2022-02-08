@@ -1,17 +1,25 @@
+import os
 import format_json
 from database import Database
 
 
-log_filename = "completed.log"
+log_filename = os.path.abspath("completed.log")
 
 
-def read_file(filename):
+def read_file(filename, filter=True):
 	try:
 		with open(filename, "r") as file:
-			data = file.read().split("\n")
+			lines = file.read().split("\n")
 	except FileExistsError:
 		write_file(filename, "")
 		return read_file(filename)
+
+	data = []
+	for line in lines:
+		if line.strip().startswith("#") and filter:
+			continue
+		data.append(line)
+
 	return data
 
 def write_file(filename, data):
