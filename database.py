@@ -3,6 +3,7 @@ import json
 from datetime import datetime
 import mmap
 import sys
+import time
 from tqdm import tqdm
 from settings import *
 
@@ -10,26 +11,6 @@ from settings import *
 timeframe = sys.argv[1:][0] if sys.argv[1:] else "RC_2008-01.json"
 sql_transaction = []
 
-
-def file_line_count(file_path, memory_mapped=False):
-	print(
-		"Reading lines (mapping file to RAM)..." \
-			if memory_mapped else                \
-		"Reading lines (disk only)..."           \
-	)
-
-	if memory_mapped:
-		# ALL YOUR RAM IS BELONG TO **BUFFER** >:P
-		with open(file_path, "r+") as filename:
-			buffer = mmap.mmap(filename.fileno(), 0)
-			lines = 0
-			while buffer.readline():
-				lines += 1
-	else:
-		# I like having RAM :)
-		lines = sum(1 for line in open(file_path))
-
-	return lines
 
 def acceptable(data):
 	# Comment contains more than 50 words or less than 1
@@ -54,7 +35,8 @@ def format_data(data):
 
 
 class Database:
-	def __init__(self, timeframe=timeframe):
+	def __init__(self, file_length, timeframe=timeframe):
+		self.file_length = file_length
 		self.timeframe = timeframe
 		self.connection = sqlite3.connect(f"{data_drive_letter}:/REDDIT_DATA/reddit_database.db")
 		self.c = self.connection.cursor()
@@ -183,10 +165,14 @@ class Database:
 
 		file_path = f"{data_drive_letter}:/REDDIT_DATA/{self.timeframe}"
 		with open(file_path, buffering=16384) as file:
-			for row in tqdm(file, desc=self.timeframe, total=file_line_count(file_path)):
+			# for row in tqdm(file, desc=self.timeframe, total=self.file_length):
+			for row in file:
+				start_time = time.time()
 				row_counter += 1
 				if (row_counter+thread_num) % (maximum_thread_limit) != 0:
+					print(f"Row: {row_counter}, Thread: {thread_num}, Time Taken {(time.time()-start_time)/1000}ms")
 					continue
+				time.sleep(0.1)
 				row = json.loads(row)
 				self.parent_id = row["parent_id"]
 				self.comment = format_data(row["body"])
@@ -212,7 +198,8 @@ class Database:
 							else:
 								self.sql_insert_no_parent()
 
-		print(f"Total rows read: {row_counter}, Paired rows: {paired_rows}, Time: {datetime.now()}")
+				print(f"Row: {row_counter}, Thread: {thread_num}, Time Taken {(time.time()-start_time)/1000}ms")
+		# print(f"Total rows read: {row_counter}, Paired rows: {paired_rows}, Time: {datetime.now()}")
 
 
 if __name__ == "__main__":
